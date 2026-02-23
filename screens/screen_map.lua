@@ -10,6 +10,8 @@ function update_map()
     if btnp(⬇️) then test_character.y = test_character.y + 1 end
     if btnp(⬅️) then test_character.x = test_character.x - 1 end
     if btnp(➡️) then test_character.x = test_character.x + 1 end
+    test_character.x = mid(0,map_width-1,test_character.x)
+    test_character.y = mid(0,map_height-1,test_character.y)
     update_los(test_map)
 end
 
@@ -22,6 +24,7 @@ function draw_map()
                 spr(tile.sprite_id,i*8,j*8)
             elseif not tile.visible and tile.explored then   
                 pal(5,1)
+                pal(6,5)
                 spr(tile.sprite_id,i*8,j*8)
                 pal()
             end

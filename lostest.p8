@@ -4,6 +4,7 @@ __lua__
 -- by squizm
 #include main.lua
 #include utils.lua
+#include player.lua
 #include screens\screen_mainmenu.lua
 #include screens\screen_map.lua
 

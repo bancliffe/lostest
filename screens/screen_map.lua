@@ -2,7 +2,8 @@ function init_map()
     map_width = 64
     map_height = 64
     test_map = generate_map(map_width,map_height)
-    test_character={x=6,y=6,sprite_id=16,vision_range=4}
+    local empty_tile = find_empty_tile(test_map)
+    player=generate_character(empty_tile.x, empty_tile.y)
     camera_x = 0
     camera_y = 0
     camera_dest_x = 0
@@ -10,15 +11,10 @@ function init_map()
 end
 
 function update_map()
-    if btnp(⬆️) then test_character.y = test_character.y - 1 end
-    if btnp(⬇️) then test_character.y = test_character.y + 1 end
-    if btnp(⬅️) then test_character.x = test_character.x - 1 end
-    if btnp(➡️) then test_character.x = test_character.x + 1 end
-    test_character.x = mid(0,map_width-1,test_character.x)
-    test_character.y = mid(0,map_height-1,test_character.y)
+    player.update()
     update_los(test_map)
-    dest_camera_x = test_character.x * 8 - 64
-    dest_camera_y = test_character.y * 8 - 64
+    dest_camera_x = player.x * 8 - 64
+    dest_camera_y = player.y * 8 - 64
     camera_x += (dest_camera_x - camera_x) * 0.2
     camera_y += (dest_camera_y - camera_y) * 0.2
 end
@@ -41,6 +37,6 @@ function draw_map()
     end
     palt(0,false)
     palt(14,true)
-    spr(test_character.sprite_id,test_character.x*8,test_character.y*8)
+    player.draw()
     palt()  
 end

@@ -10,16 +10,152 @@ function generate_map(width,height)
     for i=0,width-1 do
         map[i] = {}
         for j=0,height-1 do
-            map[i][j] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+            map[i][j] = {sprite_id=2, walkable=false, visible=false, explored=false, block_sight=true}
         end
     end
 
-    --random walls
-    for i=0,32 do
-        local x = flr(rnd(width))
-        local y = flr(rnd(height))
-        map[x][y] = {sprite_id=2, walkable=false, visible=false, explored=false, block_sight=true}
+    -- BSP parameters
+    local MIN_LEAF_SIZE = 8
+    local MAX_LEAF_SIZE = 20
+    local MIN_ROOM_SIZE = 3
+
+    -- Leaf struct
+    local function new_leaf(x,y,w,h)
+        return {x=x,y=y,w=w,h=h,left=nil,right=nil,room=nil}
     end
+
+    local leaves = {}
+    add(leaves, new_leaf(0,0,width,height))
+
+    -- try to split leaves until no more splits possible
+    local function split_leaf(leaf)
+        if leaf.left or leaf.right then return false end
+        local split_h
+        if leaf.w / leaf.h >= 1.25 then split_h = false
+        elseif leaf.h / leaf.w >= 1.25 then split_h = true
+        else split_h = rnd() > 0.5 end
+
+        local max_split = (split_h and leaf.h or leaf.w) - MIN_LEAF_SIZE
+        if max_split <= MIN_LEAF_SIZE then return false end
+
+        local split = flr(rnd(max_split - MIN_LEAF_SIZE)) + MIN_LEAF_SIZE
+        if split_h then
+            leaf.left = new_leaf(leaf.x, leaf.y, leaf.w, split)
+            leaf.right = new_leaf(leaf.x, leaf.y + split, leaf.w, leaf.h - split)
+        else
+            leaf.left = new_leaf(leaf.x, leaf.y, split, leaf.h)
+            leaf.right = new_leaf(leaf.x + split, leaf.y, leaf.w - split, leaf.h)
+        end
+        return true
+    end
+
+    -- repeatedly split
+    local did_split = true
+    while did_split do
+        did_split = false
+        for i=1,#leaves do
+            local l = leaves[i]
+            if not (l.left or l.right) then
+                if (l.w > MAX_LEAF_SIZE) or (l.h > MAX_LEAF_SIZE) or (rnd() > 0.8) then
+                    if split_leaf(l) then
+                        add(leaves, l.left)
+                        add(leaves, l.right)
+                        did_split = true
+                    end
+                end
+            end
+        end
+    end
+
+    -- collect final leaves (those without children)
+    local final_leaves = {}
+    for i=1,#leaves do
+        local l = leaves[i]
+        if not (l.left or l.right) then add(final_leaves, l) end
+    end
+
+    -- create a room inside a leaf
+    local function create_room(leaf)
+        local room_w = flr(rnd(leaf.w - 2)) + MIN_ROOM_SIZE
+        local room_h = flr(rnd(leaf.h - 2)) + MIN_ROOM_SIZE
+        if room_w >= leaf.w then room_w = leaf.w - 2 end
+        if room_h >= leaf.h then room_h = leaf.h - 2 end
+        local room_x = leaf.x + flr(rnd(leaf.w - room_w - 1)) + 1
+        local room_y = leaf.y + flr(rnd(leaf.h - room_h - 1)) + 1
+        leaf.room = {x=room_x,y=room_y,w=room_w,h=room_h}
+        -- carve room
+        for i=room_x,room_x+room_w-1 do
+            for j=room_y,room_y+room_h-1 do
+                if i>=0 and i<width and j>=0 and j<height then
+                    map[i][j] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+                end
+            end
+        end
+        return leaf.room
+    end
+
+    -- get center of a room
+    local function center(room)
+        return flr(room.x + room.w/2), flr(room.y + room.h/2)
+    end
+
+    -- create corridor between two points (L-shaped)
+    local function create_corridor(x1,y1,x2,y2)
+        if rnd() > 0.5 then
+            for x=min(x1,x2),max(x1,x2) do
+                if x>=0 and x<width and y1>=0 and y1<height then
+                    map[x][y1] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+                end
+            end
+            for y=min(y1,y2),max(y1,y2) do
+                if x2>=0 and x2<width and y>=0 and y<height then
+                    map[x2][y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+                end
+            end
+        else
+            for y=min(y1,y2),max(y1,y2) do
+                if x1>=0 and x1<width and y>=0 and y<height then
+                    map[x1][y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+                end
+            end
+            for x=min(x1,x2),max(x1,x2) do
+                if x>=0 and x<width and y2>=0 and y2<height then
+                    map[x][y2] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+                end
+            end
+        end
+    end
+
+    -- create rooms for each final leaf
+    for i=1,#final_leaves do
+        create_room(final_leaves[i])
+    end
+
+    -- helper to find a room in a leaf or its children
+    local function leaf_room(leaf)
+        if not leaf then return nil end
+        if leaf.room then return leaf.room end
+        local l = leaf_room(leaf.left)
+        if l then return l end
+        return leaf_room(leaf.right)
+    end
+
+    -- connect rooms by walking the BSP tree
+    local function connect_children(leaf)
+        if not leaf or (not leaf.left and not leaf.right) then return end
+        connect_children(leaf.left)
+        connect_children(leaf.right)
+        local r1 = leaf_room(leaf.left)
+        local r2 = leaf_room(leaf.right)
+        if r1 and r2 then
+            local x1,y1 = center(r1)
+            local x2,y2 = center(r2)
+            create_corridor(x1,y1,x2,y2)
+        end
+    end
+
+    connect_children(leaves[1])
+
     return map
 end
 
@@ -28,11 +164,11 @@ function distance(x0,y0,x1,y1)
 end
 
 function update_los(map)
-    local max_range = test_character.vision_range
-    local max_x = test_character.x + max_range
-    local min_x = test_character.x - max_range
-    local max_y = test_character.y + max_range
-    local min_y = test_character.y - max_range
+    local max_range = player.vision_range
+    local max_x = player.x + max_range
+    local min_x = player.x - max_range
+    local max_y = player.y + max_range
+    local min_y = player.y - max_range
     max_x = mid(0,map_width-1,max_x)
     min_x = mid(0,map_width-1,min_x)
     max_y = mid(0,map_height-1,max_y)
@@ -45,8 +181,8 @@ function update_los(map)
     for i=min_x,max_x do
         for j=min_y,max_y do
             local tile = map[i][j]            
-            local los = has_line_of_sight(test_character.x,test_character.y,i,j)
-            local dist = distance(test_character.x,test_character.y,i,j)
+            local los = has_line_of_sight(player.x,player.y,i,j)
+            local dist = distance(player.x,player.y,i,j)
             if los and dist <= max_range then
                 tile.visible = true
                 tile.explored = true
@@ -55,6 +191,16 @@ function update_los(map)
             end
         end
     end
+end
+
+function find_empty_tile(map)
+    local empty_tiles = {}
+    for i=0,map_width-1 do
+        for j=0,map_height-1 do
+            if map[i][j].walkable then add(empty_tiles, {x=i,y=j}) end
+        end
+    end
+    return empty_tiles[flr(rnd(#empty_tiles))+1]
 end
 
 -- Bresenham line algorithm: returns an array of tiles from (x0,y0) to (x1,y1)

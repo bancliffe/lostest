@@ -27,10 +27,22 @@ function draw_map()
             local tile = test_map[i][j]
             if tile.visible then
                 spr(tile.sprite_id,i*8,j*8)
+                if tile.object then
+                    palt(0,false)
+                    palt(14,true)
+                    spr(tile.object.sprite_id,i*8,j*8)
+                    palt()
+                end
             elseif not tile.visible and tile.explored then   
                 pal(5,1)
                 pal(6,5)
                 spr(tile.sprite_id,i*8,j*8)
+                palt(0,false)
+                if tile.object then
+                    palt(14,true)
+                    spr(tile.object.sprite_id,i*8,j*8)
+                    palt()
+                end
                 pal()
             end
         end

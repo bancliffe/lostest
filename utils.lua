@@ -4,8 +4,8 @@ function printc(string,x,y,col)
 end
 
 function generate_map(width,height)
-    if not width then width = 128 end
-    if not height then height = 128 end
+    if not width then width = 64 end
+    if not height then height = 64 end
     local map = {}
     for i=0,width-1 do
         map[i] = {}
@@ -99,9 +99,31 @@ function generate_map(width,height)
         return flr(room.x + room.w/2), flr(room.y + room.h/2)
     end
 
-    -- create corridor between two points (L-shaped)
-    local function create_corridor(x1,y1,x2,y2)
+    -- returns true if (x,y) is inside a room's floor area
+    local function in_room(x,y,room)
+        return x>=room.x and x<room.x+room.w
+           and y>=room.y and y<room.y+room.h
+    end
+
+    -- place a door tile
+    local function place_door(x,y)
+        if x>=0 and x<width and y>=0 and y<height then
+            map[x][y].object = generate_object("door",3,false,true)
+            map[x][y].object.state = "closed"
+            map[x][y].object.interact = function(tile)
+                tile.object.state = "open"
+                tile.object.block_sight = false
+                tile.object.sprite_id = 5          
+                tile.walkable = true
+                tile.block_sight = false
+            end
+        end
+    end
+
+    -- create corridor between two points (L-shaped) and place doors at each room exit
+    local function create_corridor(x1,y1,x2,y2,r1,r2)
         if rnd() > 0.5 then
+            -- horizontal leg then vertical leg
             for x=min(x1,x2),max(x1,x2) do
                 if x>=0 and x<width and y1>=0 and y1<height then
                     map[x][y1] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
@@ -112,7 +134,18 @@ function generate_map(width,height)
                     map[x2][y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
                 end
             end
+            -- door1: first tile on horizontal leg that exits room1
+            local sx = x2>=x1 and 1 or -1
+            for x=x1,x2,sx do
+                if not in_room(x,y1,r1) then place_door(x,y1) break end
+            end
+            -- door2: first tile on vertical leg that exits room2 (walking from room2 center toward bend)
+            local sy = y1>=y2 and 1 or -1
+            for y=y2,y1,sy do
+                if not in_room(x2,y,r2) then place_door(x2,y) break end
+            end
         else
+            -- vertical leg then horizontal leg
             for y=min(y1,y2),max(y1,y2) do
                 if x1>=0 and x1<width and y>=0 and y<height then
                     map[x1][y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
@@ -122,6 +155,16 @@ function generate_map(width,height)
                 if x>=0 and x<width and y2>=0 and y2<height then
                     map[x][y2] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
                 end
+            end
+            -- door1: first tile on vertical leg that exits room1
+            local sy = y2>=y1 and 1 or -1
+            for y=y1,y2,sy do
+                if not in_room(x1,y,r1) then place_door(x1,y) break end
+            end
+            -- door2: first tile on horizontal leg that exits room2 (walking from room2 center toward bend)
+            local sx = x1>=x2 and 1 or -1
+            for x=x2,x1,sx do
+                if not in_room(x,y2,r2) then place_door(x,y2) break end
             end
         end
     end
@@ -150,7 +193,7 @@ function generate_map(width,height)
         if r1 and r2 then
             local x1,y1 = center(r1)
             local x2,y2 = center(r2)
-            create_corridor(x1,y1,x2,y2)
+            create_corridor(x1,y1,x2,y2,r1,r2)
         end
     end
 
@@ -241,10 +284,12 @@ function has_line_of_sight(x0,y0,x1,y1)
     local pts = bresenham(x0,y0,x1,y1)
     for i=1,#pts do
         local p = pts[i]
+        if p.x == x1 and p.y == y1 then return true end
         local tile = test_map[p.x][p.y]
+        if tile.object then
+            if tile.object.block_sight then return false end
+        end
         if tile and tile.block_sight then
-            -- make sure the walls get marked as visible 
-            if p.x == x1 and p.y == y1 then return true end
             return false
         end
     end

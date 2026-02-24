@@ -193,6 +193,11 @@ function update_los(map)
     end
 end
 
+function find_path(start_x,start_y,end_x,end_y)
+    -- placeholder for pathfinding algorithm (e.g. A*)
+    return {}
+end
+
 function find_empty_tile(map)
     local empty_tiles = {}
     for i=0,map_width-1 do

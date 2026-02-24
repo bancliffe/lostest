@@ -28,11 +28,26 @@ function distance(x0,y0,x1,y1)
 end
 
 function update_los(map)
-    for i=0,map_width-1 do
-        for j=0,map_height-1 do
+    local max_range = test_character.vision_range
+    local max_x = test_character.x + max_range
+    local min_x = test_character.x - max_range
+    local max_y = test_character.y + max_range
+    local min_y = test_character.y - max_range
+    max_x = mid(0,map_width-1,max_x)
+    min_x = mid(0,map_width-1,min_x)
+    max_y = mid(0,map_height-1,max_y)
+    min_y = mid(0,map_height-1,min_y)
+    for cell in all(map) do
+        for tile in all(cell) do
+            tile.visible = false
+        end
+    end
+    for i=min_x,max_x do
+        for j=min_y,max_y do
             local tile = map[i][j]            
             local los = has_line_of_sight(test_character.x,test_character.y,i,j)
-            if los then
+            local dist = distance(test_character.x,test_character.y,i,j)
+            if los and dist <= max_range then
                 tile.visible = true
                 tile.explored = true
             else

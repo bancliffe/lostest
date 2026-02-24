@@ -1,8 +1,12 @@
 function init_map()
-    map_width = 16
-    map_height = 16
+    map_width = 64
+    map_height = 64
     test_map = generate_map(map_width,map_height)
-    test_character={x=6,y=6,sprite_id=16,vision_range=5}
+    test_character={x=6,y=6,sprite_id=16,vision_range=4}
+    camera_x = 0
+    camera_y = 0
+    camera_dest_x = 0
+    camera_dest_y = 0
 end
 
 function update_map()
@@ -13,10 +17,15 @@ function update_map()
     test_character.x = mid(0,map_width-1,test_character.x)
     test_character.y = mid(0,map_height-1,test_character.y)
     update_los(test_map)
+    dest_camera_x = test_character.x * 8 - 64
+    dest_camera_y = test_character.y * 8 - 64
+    camera_x += (dest_camera_x - camera_x) * 0.2
+    camera_y += (dest_camera_y - camera_y) * 0.2
 end
 
 function draw_map()
     cls(0)
+    camera(camera_x, camera_y)
     for i=0,map_width-1 do
         for j=0,map_height-1 do
             local tile = test_map[i][j]

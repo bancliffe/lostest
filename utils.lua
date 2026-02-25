@@ -98,59 +98,124 @@ function has_line_of_sight(x0,y0,x1,y1)
 end
 
 function map_from_tiles(width, height)
-    -- generate map using pregenerated rooms
-    local small_rooms={{x=0,y=32},{x=8,y=32},{x=16,y=32},{x=0,y=40},{x=8,y=40},{x=16,y=40}} -- 8x8 rooms
-    local room_width = width/8
-    local room_height = height/8
-    --log("generating ("..width.."x"..height..") tile map with room grid ("..room_width.."x"..room_height..")")
+    local small_rooms = {{x=0,y=32},{x=8,y=32},{x=16,y=32},{x=0,y=40},
+                         {x=8,y=40},{x=16,y=40},{x=24,y=32},{x=24,y=40}}
+    local large_rooms = {{x=0,y=48},{x=16,y=48},{x=32,y=48},{x=48,y=48}}
+    local room_w = width/8
+    local room_h = height/8
     local map = {}
 
-    -- initialize empty map
+    -- initialize entire map to solid walls
     for i=0,width-1 do
         map[i] = {}
         for j=0,height-1 do
-            map[i][j] = {}
+            map[i][j] = {sprite_id=2, walkable=false, visible=false,
+                           explored=false, block_sight=true}
         end
     end
 
-    -- generate map by copying pixels from small room sprites
-    for i=0,room_width-1 do
-        for j=0,room_height-1 do
-            -- TODO: switch between small and large rooms based on random chance
-            local room = small_rooms[flr(rnd(#small_rooms))+1]
-            for x=0,7 do
-                for y=0,7 do
-                    local pixel_color = sget(room.x+x,room.y+y)
-                    map_x, map_y = i*8+x, j*8+y
-                    if pixel_color == 0 then -- wall
-                        map[map_x][map_y] = {sprite_id=2, walkable=false, visible=false, explored=false, block_sight=true}
-                    elseif pixel_color == 2 then -- door
-                        map[map_x][map_y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false, object=generate_object("door",3,false,true)}
-                        map[map_x][map_y].object.state = "closed"
-                        map[map_x][map_y].object.interact = function(tile)
-                            tile.object.state = "open"
-                            tile.object.block_sight = false
-                            tile.object.sprite_id = 5          
-                            tile.walkable = true
-                            tile.block_sight = false
-                            end
-                    elseif pixel_color == 5 then -- floor
-                        map[map_x][map_y] = {sprite_id=1, walkable=true, visible=false, explored=false, block_sight=false}
+    -- track which 8x8 slots are filled
+    local occupied = {}
+    for i=0,room_w-1 do
+        occupied[i] = {}
+        for j=0,room_h-1 do occupied[i][j] = false end
+    end
+
+    -- shared helper: write one tile from a spritesheet pixel color
+    local function write_tile(mx, my, col)
+        if col == 0 then
+            map[mx][my] = {sprite_id=2, walkable=false, visible=false,
+                           explored=false, block_sight=true}
+        elseif col == 2 then
+            map[mx][my] = {sprite_id=1, walkable=true, visible=false,
+                           explored=false, block_sight=false,
+                           object=generate_object("door",3,false,true)}
+            map[mx][my].object.state = "closed"
+            map[mx][my].object.interact = function(tile)
+                tile.object.state = "open"
+                tile.object.block_sight = false
+                tile.object.sprite_id = 5
+                tile.walkable = true
+                tile.block_sight = false
+            end
+        elseif col == 5 then
+            map[mx][my] = {sprite_id=1, walkable=true, visible=false,
+                           explored=false, block_sight=false}
+        end
+    end
+
+    for i=0,room_w-1 do
+        for j=0,room_h-1 do
+            if not occupied[i][j] then
+                -- large room requires a free 2x2 block of slots
+                local can_large = i+1 < room_w and j+1 < room_h
+                    and not occupied[i+1][j]
+                    and not occupied[i][j+1]
+                    and not occupied[i+1][j+1]
+
+                if can_large and rnd() > 0.75 then
+                    local room = large_rooms[flr(rnd(#large_rooms))+1]
+                    for x=0,15 do
+                        for y=0,15 do
+                            write_tile(i*8+x, j*8+y, sget(room.x+x, room.y+y))
+                        end
+                    end
+                    -- mark all four 8x8 slots consumed
+                    occupied[i][j]     = true
+                    occupied[i+1][j]   = true
+                    occupied[i][j+1]   = true
+                    occupied[i+1][j+1] = true
+                else
+                    local room = small_rooms[flr(rnd(#small_rooms))+1]
+                    for x=0,7 do
+                        for y=0,7 do
+                            write_tile(i*8+x, j*8+y, sget(room.x+x, room.y+y))
+                        end
+                    end
+                    occupied[i][j] = true
+                end
+            end
+        end
+    end
+
+    -- seal map border
+    for i=0,width-1 do
+        for j=0,height-1 do
+            if i==0 or j==0 or i==width-1 or j==height-1 then
+                map[i][j] = {sprite_id=2, walkable=false, visible=false,
+                             explored=false, block_sight=true}
+            end
+        end
+    end
+
+    for i=1,width-2 do
+        for j=1,height-2 do
+            local tile = map[i][j]
+            if tile.object and tile.object.state == "closed" then
+                -- check right and down neighbors only (avoid double-processing)
+                for _,n in ipairs({{i+1,j},{i,j+1}}) do
+                    local nx,ny = n[1],n[2]
+                    local ntile = map[nx][ny]
+                    if ntile.object and ntile.object.state == "closed" then
+                        -- replace the neighbor door with a plain floor tile
+                        map[nx][ny] = {sprite_id=1, walkable=true, visible=false,
+                                    explored=false, block_sight=false}
                     end
                 end
             end
         end
     end
 
-    -- remove edge doors
-    for i=0,width-1 do
-        for j=0,height-1 do
-            if i==0 or j==0 or i==width-1 or j==height-1 then
-                map[i][j] = {sprite_id=2, walkable=false, visible=false, explored=false, block_sight=true}
-            end
+    return map
+end
+
+function is_map_block_empty(map,map_block_x, map_block_y)
+    for x=map_block_x*8, map_block_x*8+7 do
+        for y=map_block_y*8, map_block_y*8+7 do
+            if not map[x][y] then return false end
         end
     end
-    return map
+    return true
 end
 
 function init_log()
@@ -173,4 +238,24 @@ function get_local_time()
     local minute = stat(94)
     local second = stat(95)
     return year.."-"..month.."-"..day.." "..hour..":"..minute..":"..second
+end
+
+function generate_minimap(map)
+    local minimap = {}
+    for i=0,map_width-1 do
+        minimap[i] = {}
+        for j=0,map_height-1 do
+            local tile = map[i][j]
+            if tile.explored and tile.walkable then
+                if tile.visible then
+                    minimap[i][j] = 11-- white for visible tiles
+                else
+                    minimap[i][j] = 3 -- dark gray for explored but not visible tiles
+                end
+            else
+                minimap[i][j] = 0 -- black for unexplored tiles
+            end
+        end
+    end
+    return minimap
 end

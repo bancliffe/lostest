@@ -1,9 +1,10 @@
 function init_map()
-    map_width = 64
-    map_height = 64
+    map_width = 32
+    map_height = 32
     test_map = map_from_tiles(map_width,map_height)
     local empty_tile = find_empty_tile(test_map)
     player=generate_character(empty_tile.x, empty_tile.y)
+    minimap = generate_minimap(test_map)
 
     camera_x = 0
     camera_y = 0
@@ -14,6 +15,7 @@ end
 function update_map()
     player.update()
     update_los(test_map)
+    minimap = generate_minimap(test_map)
     dest_camera_x = player.x * 8 - 64
     dest_camera_y = player.y * 8 - 64
     camera_x += (dest_camera_x - camera_x) * 0.2
@@ -34,7 +36,8 @@ function draw_map()
                     spr(tile.object.sprite_id,i*8,j*8)
                     palt()
                 end
-            elseif not tile.visible and tile.explored then   
+            elseif not tile.visible and tile.explored then 
+                --[[  
                 pal(5,1)
                 pal(6,5)
                 spr(tile.sprite_id,i*8,j*8)
@@ -45,6 +48,7 @@ function draw_map()
                     palt()
                 end
                 pal()
+                ]]
             end
         end
     end
@@ -57,5 +61,15 @@ end
 
 function draw_ui()
     camera()
-    print("x:"..player.x.." y:"..player.y,2,2,7)
+    --print("x:"..player.x.." y:"..player.y,2,2,7)
+    draw_minimap(2,64)
+end
+
+function draw_minimap(x, y)
+    rectfill(x-1,y-1,x+17,y+17,0)
+    for i=0,#minimap-1 do
+        for j=0,#minimap[0]-1 do
+            pset(x+i,y+j,minimap[i][j])
+        end
+    end
 end

@@ -1,9 +1,10 @@
 function init_map()
     map_width = 64
     map_height = 64
-    test_map = generate_map(map_width,map_height)
+    test_map = map_from_tiles(map_width,map_height)
     local empty_tile = find_empty_tile(test_map)
     player=generate_character(empty_tile.x, empty_tile.y)
+
     camera_x = 0
     camera_y = 0
     camera_dest_x = 0
@@ -51,4 +52,10 @@ function draw_map()
     palt(14,true)
     player.draw()
     palt()  
+    draw_ui()
+end
+
+function draw_ui()
+    camera()
+    print("x:"..player.x.." y:"..player.y,2,2,7)
 end

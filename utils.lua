@@ -209,15 +209,6 @@ function map_from_tiles(width, height)
     return map
 end
 
-function is_map_block_empty(map,map_block_x, map_block_y)
-    for x=map_block_x*8, map_block_x*8+7 do
-        for y=map_block_y*8, map_block_y*8+7 do
-            if not map[x][y] then return false end
-        end
-    end
-    return true
-end
-
 function init_log()
     if debug_mode then
         printh(get_local_time()..": -= Log Start =-", "log.txt", true) -- clear log file

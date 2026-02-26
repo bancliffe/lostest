@@ -3,7 +3,7 @@ function generate_character(x,y)
     x=x or 0,
     y=y or 0,
     sprite_id=16,
-    vision_range=5,
+    vision_range=6,
     update=function()
         local dx,dy=0,0
         if btnp(⬆️) then dy -= 1 end

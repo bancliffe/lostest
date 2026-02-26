@@ -23,19 +23,22 @@ function update_map()
 end
 
 function draw_map()
-    cls(0)
+    cls(1)
+    fillp(0x5f5f)
+    rectfill(0,0,128,128,1)
+    fillp()
     camera(camera_x, camera_y)
     for i=0,map_width-1 do
         for j=0,map_height-1 do
             local tile = test_map[i][j]
             if tile.visible then
+                palt(0,false)
+                palt(14,true)
                 spr(tile.sprite_id,i*8,j*8)
-                if tile.object then
-                    palt(0,false)
-                    palt(14,true)
+                if tile.object then   
                     spr(tile.object.sprite_id,i*8,j*8)
-                    palt()
                 end
+                palt()
             elseif not tile.visible and tile.explored then 
                 --[[  
                 pal(5,1)
@@ -62,11 +65,12 @@ end
 function draw_ui()
     camera()
     --print("x:"..player.x.." y:"..player.y,2,2,7)
-    draw_minimap(2,64)
+    draw_minimap(1,1)
 end
 
 function draw_minimap(x, y)
-    rectfill(x-1,y-1,x+17,y+17,0)
+    rectfill(x-1,y-1,x+32,y+32,0)
+    rect(x-1,y-1,x+32,y+32,7)
     for i=0,#minimap-1 do
         for j=0,#minimap[0]-1 do
             pset(x+i,y+j,minimap[i][j])

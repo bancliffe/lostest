@@ -23,7 +23,7 @@ function update_map()
 end
 
 function draw_map()
-    cls(1)
+    cls(0)
     fillp(0x5f5f)
     rectfill(0,0,128,128,1)
     fillp()
@@ -39,19 +39,6 @@ function draw_map()
                     spr(tile.object.sprite_id,i*8,j*8)
                 end
                 palt()
-            elseif not tile.visible and tile.explored then 
-                --[[  
-                pal(5,1)
-                pal(6,5)
-                spr(tile.sprite_id,i*8,j*8)
-                palt(0,false)
-                if tile.object then
-                    palt(14,true)
-                    spr(tile.object.sprite_id,i*8,j*8)
-                    palt()
-                end
-                pal()
-                ]]
             end
         end
     end

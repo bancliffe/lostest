@@ -5,6 +5,7 @@ function init_map()
     local empty_tile = find_empty_tile(test_map)
     player=generate_character(empty_tile.x, empty_tile.y)
     minimap = generate_minimap(test_map)
+    show_minimap = false
 
     camera_x = 0
     camera_y = 0
@@ -23,7 +24,7 @@ function update_map()
 end
 
 function draw_map()
-    cls(0)
+    cls(1)
     fillp(0x5f5f)
     rectfill(0,0,128,128,1)
     fillp()
@@ -52,7 +53,9 @@ end
 function draw_ui()
     camera()
     --print("x:"..player.x.." y:"..player.y,2,2,7)
-    draw_minimap(1,1)
+    if show_minimap then
+        draw_minimap(1,1)
+    end
 end
 
 function draw_minimap(x, y)

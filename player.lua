@@ -1,34 +1,38 @@
 function generate_character(x,y)
     player={
-    x=x or 0,
-    y=y or 0,
-    sprite_id=16,
-    vision_range=6,
-    update=function()
-        local dx,dy=0,0
-        if btnp(⬆️) then dy -= 1 end
-        if btnp(⬇️) then dy += 1 end
-        if btnp(⬅️) then dx -= 1 end
-        if btnp(➡️) then dx += 1 end
-        -- check for interactable objects before moving
-        local tile = test_map[player.x+dx] and test_map[player.x+dx][player.y+dy]
-        if tile then
-            if tile.object then
-                if tile.object.name=="door" and tile.object.state=="open" then
+        x=x or 0,
+        y=y or 0,
+        sprite_id=16,
+        vision_range=6,
+        flipped=false,
+        update=function()
+            local dx,dy=0,0
+            if btnp(⬆️) then dy -= 1 end
+            if btnp(⬇️) then dy += 1 end
+            if btnp(⬅️) then dx -= 1 player.flipped=true end
+            if btnp(➡️) then dx += 1 player.flipped=false end
+            -- check for interactable objects before moving
+            local tile = test_map[player.x+dx] and test_map[player.x+dx][player.y+dy]
+            if tile then
+                if tile.object then
+                    if tile.object.name=="door" and tile.object.state=="open" then
+                        player.x = mid(0,map_width-1,player.x + dx)
+                        player.y = mid(0,map_height-1,player.y + dy)
+                    elseif tile.object.name=="door" and tile.object.state=="closed" then
+                        tile.object.interact(tile)
+                    end
+                elseif test_map[player.x+dx] and test_map[player.x+dx][player.y+dy] and test_map[player.x+dx][player.y+dy].walkable then
                     player.x = mid(0,map_width-1,player.x + dx)
                     player.y = mid(0,map_height-1,player.y + dy)
-                elseif tile.object.name=="door" and tile.object.state=="closed" then
-                    tile.object.interact(tile)
                 end
-            elseif test_map[player.x+dx] and test_map[player.x+dx][player.y+dy] and test_map[player.x+dx][player.y+dy].walkable then
-                player.x = mid(0,map_width-1,player.x + dx)
-                player.y = mid(0,map_height-1,player.y + dy)
             end
+            if btnp(❎) then
+                show_minimap = not show_minimap
+            end
+        end,
+        draw=function()
+            spr(player.sprite_id,player.x*8,player.y*8,1,1, player.flipped, false)
         end
-    end,
-    draw=function()
-        spr(player.sprite_id,player.x*8,player.y*8)
-    end
     }
     return player
 end

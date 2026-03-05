@@ -6,8 +6,10 @@ end
 function update_mainmenu()
     if btnp(⬆️) then
         choice = max(choice-1,1)
+        sfx(0)
     elseif btnp(⬇️) then
         choice = min(choice+1,#choices)
+        sfx(0)
     end
 
     if btnp(🅾️) then

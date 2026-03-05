@@ -138,6 +138,7 @@ function map_from_tiles(width, height)
                            object=generate_object("door",3,false,true)}
             map[mx][my].object.state = "closed"
             map[mx][my].object.interact = function(tile)
+                sfx(0)
                 tile.object.state = "open"
                 tile.object.block_sight = false
                 tile.object.sprite_id = 5

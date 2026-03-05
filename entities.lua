@@ -221,7 +221,7 @@ npc = entity:new({
     end,
     
     animate_move=function(_ENV)
-        mx += dx
+        mx += dx 
         my += dy
         move_dist -= 1
         if move_dist == 0 then
@@ -235,10 +235,13 @@ npc = entity:new({
         end
         return false  -- still animating
     end,
+
     draw=function(_ENV)
         spr(sprite_id,(x*8)+mx,(y*8)+my,1,1, flipped, false)
     end,
+
     interact=function(_ENV)
+        sfx(1)
         log("mob interaction with player at ("..x..","..y..")")
     end
 })

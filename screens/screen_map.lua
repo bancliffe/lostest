@@ -3,9 +3,19 @@ function init_map()
     map_height = 32
     test_map = map_from_tiles(map_width,map_height)
     local empty_tile = find_empty_tile(test_map)
-    player=generate_character(empty_tile.x, empty_tile.y)
+    global.pc=player:new({x=empty_tile.x, y=empty_tile.y})
     minimap = generate_minimap(test_map)
-    show_minimap = false
+    global.show_minimap = false
+    characters={}
+    add(characters,global.pc)
+
+    for i=1,30 do
+        local empty_tile = find_empty_tile(test_map)
+        local sprite_id = 17 + flr(rnd(5))
+        log("placing npc at ("..empty_tile.x..","..empty_tile.y..") with sprite_id "..sprite_id)
+        local c = npc:new({x=empty_tile.x, y=empty_tile.y,sprite_id=sprite_id})
+        add(characters, c)
+    end
 
     camera_x = 0
     camera_y = 0
@@ -14,17 +24,19 @@ function init_map()
 end
 
 function update_map()
-    player.update()
+    for i=1,#characters do
+        characters[i]:update()
+    end
     update_los(test_map)
     minimap = generate_minimap(test_map)
-    dest_camera_x = player.x * 8 - 64
-    dest_camera_y = player.y * 8 - 64
+    dest_camera_x = global.pc.x * 8 - 64
+    dest_camera_y = global.pc.y * 8 - 64
     camera_x += (dest_camera_x - camera_x) * 0.2
     camera_y += (dest_camera_y - camera_y) * 0.2
 end
 
 function draw_map()
-    cls(1)
+    cls(0)
     fillp(0x5f5f)
     rectfill(0,0,128,128,1)
     fillp()
@@ -45,14 +57,18 @@ function draw_map()
     end
     palt(0,false)
     palt(14,true)
-    player.draw()
+    for i=1,#characters do
+        if test_map[characters[i].x] and test_map[characters[i].x][characters[i].y] and test_map[characters[i].x][characters[i].y].visible then
+            characters[i]:draw()
+        end
+    end
     palt()  
-    draw_ui()
+    draw_ui()    
 end
 
 function draw_ui()
     camera()
-    --print("x:"..player.x.." y:"..player.y,2,2,7)
+    print("x:"..global.pc.x.." y:"..global.pc.y,2,120,7)
     if show_minimap then
         draw_minimap(1,1)
     end

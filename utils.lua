@@ -11,11 +11,11 @@ end
 
 -- updates line-of-sight for all tiles based on player position and vision range
 function update_los(map)
-    local max_range = player.vision_range
-    local max_x = player.x + max_range
-    local min_x = player.x - max_range
-    local max_y = player.y + max_range
-    local min_y = player.y - max_range
+    local max_range = pc.vision_range
+    local max_x = pc.x + max_range
+    local min_x = pc.x - max_range
+    local max_y = pc.y + max_range
+    local min_y = pc.y - max_range
     max_x = mid(0,map_width-1,max_x)
     min_x = mid(0,map_width-1,min_x)
     max_y = mid(0,map_height-1,max_y)
@@ -28,8 +28,8 @@ function update_los(map)
     for i=min_x,max_x do
         for j=min_y,max_y do
             local tile = map[i][j]            
-            local los = has_line_of_sight(player.x,player.y,i,j)
-            local dist = distance(player.x,player.y,i,j)
+            local los = has_line_of_sight(pc.x,pc.y,i,j,max_range)
+            local dist = distance(pc.x,pc.y,i,j)
             if los and dist <= max_range then
                 tile.visible = true
                 tile.explored = true
@@ -46,7 +46,7 @@ function find_empty_tile(map)
     for i=0,#map-1 do
         for j=0,#map[0]-1 do
             --log("checking tile ("..i..","..j..")")
-            if map[i][j].walkable then add(empty_tiles, {x=i,y=j}) end
+            if map[i][j].sprite_id==1 then add(empty_tiles, {x=i,y=j}) end
         end
     end
     return empty_tiles[flr(rnd(#empty_tiles))+1]
@@ -81,8 +81,10 @@ function bresenham(x0,y0,x1,y1)
 end
 
 -- Check line-of-sight between two tile coordinates.
-function has_line_of_sight(x0,y0,x1,y1)
+function has_line_of_sight(x0,y0,x1,y1,max_range)
+    max_range = max_range or 5
     local pts = bresenham(x0,y0,x1,y1)
+    if #pts > max_range then return false end
     for i=1,#pts do
         local p = pts[i]
         if p.x == x1 and p.y == y1 then return true end

@@ -284,3 +284,116 @@ function get_character_at(x,y)
     end
     return nil
 end
+
+function find_path(start_x,start_y,goal_x,goal_y)
+    -- A* pathfinding with orthogonal movement only
+    if start_x == goal_x and start_y == goal_y then return {} end
+    
+    -- check if goal tile itself is walkable (ignore character occupancy for goal)
+    if test_map[goal_x] and test_map[goal_x][goal_y] then
+        local goal_tile = test_map[goal_x][goal_y]
+        if not goal_tile.walkable then return {} end
+        if goal_tile.object and not goal_tile.object.walkable then return {} end
+    else
+        return {}
+    end
+    
+    local function manhattan(x1, y1, x2, y2)
+        return abs(x1 - x2) + abs(y1 - y2)
+    end
+    
+    local open_list = {}
+    local closed_set = {}
+    local came_from = {}
+    local g_score = {}
+    local f_score = {}
+    
+    -- initialize start node
+    local start_key = start_x..","..start_y
+    add(open_list, {x=start_x, y=start_y})
+    g_score[start_key] = 0
+    f_score[start_key] = manhattan(start_x, start_y, goal_x, goal_y)
+    
+    while #open_list > 0 do
+        -- find node in open_list with lowest f_score
+        local current_idx = 1
+        local current = open_list[1]
+        local current_key = current.x..","..current.y
+        for i=2,#open_list do
+            local node = open_list[i]
+            local node_key = node.x..","..node.y
+            if f_score[node_key] < f_score[current_key] then
+                current_idx = i
+                current = node
+                current_key = node_key
+            end
+        end
+        
+        -- reached goal?
+        if current.x == goal_x and current.y == goal_y then
+            -- reconstruct path
+            local path = {}
+            local key = current_key
+            while came_from[key] do
+                local coords = came_from[key]
+                add(path, {x=coords.x, y=coords.y})
+                key = coords.x..","..coords.y
+            end
+            -- reverse path and add goal
+            local final_path = {}
+            for i=#path,1,-1 do
+                add(final_path, path[i])
+            end
+            add(final_path, {x=goal_x, y=goal_y})
+            return final_path
+        end
+        
+        -- move current from open to closed
+        deli(open_list, current_idx)
+        closed_set[current_key] = true
+        
+        -- check 4 neighbors (orthogonal only: up, down, left, right)
+        local neighbors = {
+            {x=current.x, y=current.y-1},
+            {x=current.x, y=current.y+1},
+            {x=current.x-1, y=current.y},
+            {x=current.x+1, y=current.y}
+        }
+        
+        for i=1,#neighbors do
+            local neighbor = neighbors[i]
+            local nx, ny = neighbor.x, neighbor.y
+            local neighbor_key = nx..","..ny
+            
+            -- check if valid and walkable
+            if nx >= 0 and nx < map_width and ny >= 0 and ny < map_height then
+                if (nx == goal_x and ny == goal_y) or walkable(nx, ny) then
+                    if not closed_set[neighbor_key] then
+                        local tentative_g = g_score[current_key] + 1
+                        
+                        -- check if neighbor is in open_list
+                        local in_open = false
+                        for j=1,#open_list do
+                            if open_list[j].x == nx and open_list[j].y == ny then
+                                in_open = true
+                                break
+                            end
+                        end
+                        
+                        if not in_open or tentative_g < (g_score[neighbor_key] or 9999) then
+                            came_from[neighbor_key] = {x=current.x, y=current.y}
+                            g_score[neighbor_key] = tentative_g
+                            f_score[neighbor_key] = tentative_g + manhattan(nx, ny, goal_x, goal_y)
+                            
+                            if not in_open then
+                                add(open_list, {x=nx, y=ny})
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return {} -- no path found
+end

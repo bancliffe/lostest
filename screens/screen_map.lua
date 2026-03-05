@@ -10,7 +10,7 @@ function init_map()
     minimap = generate_minimap(test_map)    
     add(global.characters,global.pc)
     
-    for i=1,30 do
+    for i=1,15 do
         local empty_tile = find_empty_tile(test_map)
         local sprite_id = 17 + flr(rnd(5))
         local c = npc:new({x=empty_tile.x, y=empty_tile.y,sprite_id=sprite_id})
@@ -19,21 +19,49 @@ function init_map()
     
     -- turn-based system
     player_acted = false
+    current_npc_turn = 1
+    npc_turn_in_progress = false
     update_los(test_map)
 end
 
 function update_map()
-    -- player turn
-    player_acted = global.pc:update()
-    
-    -- if player acted, update all NPCs
-    if player_acted then
-        for i=2,#global.characters do
-            global.characters[i]:update()
+    if not npc_turn_in_progress then
+        -- player turn
+        player_acted = global.pc:update()
+        
+        -- if player acted, start NPC turns
+        if player_acted then
+            npc_turn_in_progress = true
+            current_npc_turn = 2  -- start with first NPC (index 2)
+            update_los(test_map)
+            minimap = generate_minimap(test_map)
+            -- initiate first NPC turn
+            if current_npc_turn <= #global.characters then
+                global.characters[current_npc_turn].state = "take_turn"
+            end
         end
-        update_los(test_map)
-        minimap = generate_minimap(test_map)
-    end    
+    else
+        -- process current NPC turn
+        if current_npc_turn <= #global.characters then
+            local npc = global.characters[current_npc_turn]
+            local turn_complete = npc:update()
+            
+            if turn_complete then
+                -- move to next NPC
+                current_npc_turn += 1
+                if current_npc_turn <= #global.characters then
+                    global.characters[current_npc_turn].state = "take_turn"
+                else
+                    -- all NPCs done, return control to player
+                    npc_turn_in_progress = false
+                end
+            end
+        else
+            -- all NPCs done
+            npc_turn_in_progress = false
+        end
+    end
+    
     my_camera:update()    
 end
 

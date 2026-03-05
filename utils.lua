@@ -41,12 +41,16 @@ function update_los(map)
 end
 
 -- find a random walkable tile on the map (used for player start position)
-function find_empty_tile(map)
+function find_empty_tile(map,minx,maxx,miny,maxy)
+    minx = minx or 0
+    maxx = maxx or #map-1
+    miny = miny or 0
+    maxy = maxy or #map[0]-1
     local empty_tiles = {}
-    for i=0,#map-1 do
-        for j=0,#map[0]-1 do
+    for i=minx,maxx do
+        for j=miny,maxy do
             --log("checking tile ("..i..","..j..")")
-            if map[i][j].sprite_id==1 then add(empty_tiles, {x=i,y=j}) end
+            if map[i][j].sprite_id==1 and map[i][j].object == nil and get_character_at(i,j) == nil then add(empty_tiles, {x=i,y=j}) end
         end
     end
     return empty_tiles[flr(rnd(#empty_tiles))+1]
@@ -137,6 +141,7 @@ function map_from_tiles(width, height)
                 tile.object.state = "open"
                 tile.object.block_sight = false
                 tile.object.sprite_id = 5
+                tile.object.walkable = true
                 tile.walkable = true
                 tile.block_sight = false
             end
@@ -233,6 +238,18 @@ function get_local_time()
     return year.."-"..month.."-"..day.." "..hour..":"..minute..":"..second
 end
 
+function walkable(x,y)
+    local tile = test_map[x][y]
+    if tile.object and not tile.object.walkable then return false end
+    return tile and tile.walkable and not get_character_at(x,y)
+end
+
+function interactable(x,y)
+    local tile = test_map[x][y]
+    if tile.object and tile.object.interact then return true end
+    return false
+end
+
 function generate_minimap(map)
     local minimap = {}
     for i=0,map_width-1 do
@@ -251,4 +268,13 @@ function generate_minimap(map)
         end
     end
     return minimap
+end
+
+function get_character_at(x,y)
+    for i=1,#global.characters do
+        if global.characters[i].x == x and global.characters[i].y == y then
+            return global.characters[i]
+        end
+    end
+    return nil
 end

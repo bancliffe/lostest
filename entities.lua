@@ -22,51 +22,82 @@ object=class:new({
     sprite_id=0,
     walkable=false,
     block_sight=false,
-    interact=function(self) end
+    interact=function(_ENV) end
 })
 
 player=entity:new({
     x=x or 0,
     y=y or 0,
+    mx=0,
+    my=0,
     sprite_id=16,
     vision_range=6,
+    dx=0,
+    dy=0,
+    move_dist=0,
     flipped=false,
     state="idle",
-    
+
     update=function(_ENV)
-        local dx,dy=0,0
-        if btnp(⬆️) then dy -= 1 end
-        if btnp(⬇️) then dy += 1 end
-        if btnp(⬅️) then dx -= 1 flipped=true end
-        if btnp(➡️) then dx += 1 flipped=false end
+        if state == "idle" then
+            return move_or_interact(_ENV)
+        elseif state == "move" then
+            return move_player(_ENV, dx, dy)
+        elseif state == "bump" then
+            return bump_player(_ENV)
+        end
+    end,
+
+    bump_player=function(_ENV)
+        -- placeholder for bump animation or sound effect
+        state = "idle"
+        return true
+    end,
+
+    move_player=function(_ENV, dx, dy)
+        mx+=dx
+        my+=dy
+        move_dist-=1
+        if move_dist==0 then
+            state="idle"
+            mx=0
+            my=0
+            x+=dx
+            y+=dy
+            return true
+        end
+        return false
+    end,
+
+    move_or_interact=function(_ENV)
+        local action_taken = false
+        dx,dy=0,0
+        if btnp(⬆️) then dy -= 1
+        elseif btnp(⬇️) then dy += 1 
+        elseif btnp(⬅️) then dx -= 1 flipped=true 
+        elseif btnp(➡️) then dx += 1 flipped=false end
+
         -- check for interactable objects before moving
-        local tile = test_map[x+dx] and test_map[x+dx][y+dy]
-        if tile then
-            if tile.object then
-                if tile.object.name=="door" and tile.object.state=="open" then
-                    x = mid(0,map_width-1,x + dx)
-                    y = mid(0,map_height-1,y + dy)
-                elseif tile.object.name=="door" and tile.object.state=="closed" then
+        if dx != 0 or dy != 0 then
+            if walkable(x+dx,y+dy) then
+                move_dist=8
+                state="move"
+            elseif interactable(x+dx,y+dy) then
+                local tile = test_map[x+dx] and test_map[x+dx][y+dy]
+                if tile and tile.object then
                     tile.object.interact(tile)
+                    state="bump"
                 end
-            elseif test_map[x+dx] and test_map[x+dx][y+dy] and test_map[x+dx][y+dy].walkable then
-                x = mid(0,map_width-1,x + dx)
-                y = mid(0,map_height-1,y + dy)
             end
         end
         if btnp(❎) then
             global.show_minimap = not global.show_minimap
         end
+        return action_taken
     end,
 
     draw=function(_ENV)
-         if state=="idle" then
-            local sx = (sprite_id%16)*8
-            local sy = (sprite_id\16)*8
-            sspr(sx,sy,8,8,x*8,y*8,8,8, flipped, false)            
-        else 
-            spr(sprite_id,x*8,y*8,1,1, flipped, false)
-         end
+        spr(sprite_id,(x*8)+mx,(y*8)+my,1,1, flipped, false)
     end
 })
 

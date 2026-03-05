@@ -1,38 +1,41 @@
 function init_map()
     map_width = 32
     map_height = 32
-    test_map = map_from_tiles(map_width,map_height)
-    local empty_tile = find_empty_tile(test_map)
-    global.pc=player:new({x=empty_tile.x, y=empty_tile.y})
-    minimap = generate_minimap(test_map)
     global.show_minimap = false
-    characters={}
-    add(characters,global.pc)
-
+    global.characters={}
+    test_map = map_from_tiles(map_width,map_height)
+    local empty_tile = find_empty_tile(test_map,0,8,0,8)
+    global.pc=player:new({x=empty_tile.x, y=empty_tile.y})
+    my_camera = game_camera:new({target=global.pc})
+    minimap = generate_minimap(test_map)    
+    add(global.characters,global.pc)
+    
     for i=1,30 do
         local empty_tile = find_empty_tile(test_map)
         local sprite_id = 17 + flr(rnd(5))
-        log("placing npc at ("..empty_tile.x..","..empty_tile.y..") with sprite_id "..sprite_id)
         local c = npc:new({x=empty_tile.x, y=empty_tile.y,sprite_id=sprite_id})
-        add(characters, c)
+        add(global.characters, c)
     end
-
-    camera_x = 0
-    camera_y = 0
-    camera_dest_x = 0
-    camera_dest_y = 0
+    
+    -- turn-based system
+    player_acted = false
+    update_los(test_map)
 end
 
 function update_map()
-    for i=1,#characters do
-        characters[i]:update()
+    -- player turn
+    player_acted = global.pc:update()
+    
+    -- if player acted, update all NPCs
+    if player_acted then
+        for i=2,#global.characters do
+            global.characters[i]:update()
+        end
+        update_los(test_map)
+        minimap = generate_minimap(test_map)
     end
-    update_los(test_map)
-    minimap = generate_minimap(test_map)
-    dest_camera_x = global.pc.x * 8 - 64
-    dest_camera_y = global.pc.y * 8 - 64
-    camera_x += (dest_camera_x - camera_x) * 0.2
-    camera_y += (dest_camera_y - camera_y) * 0.2
+    
+    my_camera:update()    
 end
 
 function draw_map()
@@ -40,7 +43,7 @@ function draw_map()
     fillp(0x5f5f)
     rectfill(0,0,128,128,1)
     fillp()
-    camera(camera_x, camera_y)
+    camera(my_camera.x, my_camera.y)
     for i=0,map_width-1 do
         for j=0,map_height-1 do
             local tile = test_map[i][j]
@@ -57,9 +60,9 @@ function draw_map()
     end
     palt(0,false)
     palt(14,true)
-    for i=1,#characters do
-        if test_map[characters[i].x] and test_map[characters[i].x][characters[i].y] and test_map[characters[i].x][characters[i].y].visible then
-            characters[i]:draw()
+    for i=1,#global.characters do
+        if test_map[global.characters[i].x] and test_map[global.characters[i].x][global.characters[i].y] and test_map[global.characters[i].x][global.characters[i].y].visible then
+            global.characters[i]:draw()
         end
     end
     palt()  
@@ -68,10 +71,10 @@ end
 
 function draw_ui()
     camera()
-    print("x:"..global.pc.x.." y:"..global.pc.y,2,120,7)
-    if show_minimap then
+    if global.show_minimap then
         draw_minimap(1,1)
     end
+    ?global.pc.state
 end
 
 function draw_minimap(x, y)

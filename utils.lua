@@ -216,6 +216,7 @@ function map_from_tiles(width, height)
     return map
 end
 
+
 function init_log()
     if debug_mode then
         printh(get_local_time()..": -= Log Start =-", "log.txt", true) -- clear log file
@@ -247,6 +248,11 @@ end
 function interactable(x,y)
     local tile = test_map[x][y]
     if tile.object and tile.object.interact then return true end
+    for i=1,#global.characters do
+        if global.characters[i].x == x and global.characters[i].y == y and global.characters[i].interact then
+             return true
+        end
+    end
     return false
 end
 

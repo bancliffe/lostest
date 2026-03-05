@@ -33,8 +33,7 @@ function update_map()
         end
         update_los(test_map)
         minimap = generate_minimap(test_map)
-    end
-    
+    end    
     my_camera:update()    
 end
 
@@ -74,7 +73,6 @@ function draw_ui()
     if global.show_minimap then
         draw_minimap(1,1)
     end
-    ?global.pc.state
 end
 
 function draw_minimap(x, y)

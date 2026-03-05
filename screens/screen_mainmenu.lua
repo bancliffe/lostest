@@ -13,7 +13,7 @@ function update_mainmenu()
     if btnp(🅾️) then
         if choice == 1 then
             init_map()
-            _update = update_map
+            _update60 = update_map
             _draw = draw_map
         elseif choice == 2 then
             -- exit game

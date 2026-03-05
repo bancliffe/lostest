@@ -42,19 +42,30 @@ player=entity:new({
         if state == "idle" then
             return move_or_interact(_ENV)
         elseif state == "move" then
-            return move_player(_ENV, dx, dy)
+            return move_player(_ENV)
         elseif state == "bump" then
             return bump_player(_ENV)
         end
     end,
 
     bump_player=function(_ENV)
-        -- placeholder for bump animation or sound effect
-        state = "idle"
-        return true
+        mx+=dx
+        my+=dy
+        move_dist-=1
+        if move_dist==4 then
+            dx *= -1
+            dy *= -1
+        end
+        if move_dist==0 then
+            state="idle"
+            mx=0
+            my=0
+            return true
+        end
+        return false
     end,
 
-    move_player=function(_ENV, dx, dy)
+    move_player=function(_ENV)
         mx+=dx
         my+=dy
         move_dist-=1
@@ -86,7 +97,17 @@ player=entity:new({
                 local tile = test_map[x+dx] and test_map[x+dx][y+dy]
                 if tile and tile.object then
                     tile.object.interact(tile)
+                    move_dist=8
                     state="bump"
+                end
+                for i=1,#global.characters do
+                    local c = global.characters[i]
+                    if c.x == x+dx and c.y == y+dy and c.interact then
+                        c.interact(c)
+                        move_dist=8
+                        state="bump"
+                        break
+                    end
                 end
             end
         end
@@ -110,6 +131,9 @@ npc = entity:new({
     update=function(_ENV) if global.pc.x < x then flipped = true else flipped =false end end,
     draw=function(_ENV)
         spr(sprite_id,x*8,y*8,1,1, flipped, false)
+    end,
+    interact=function(_ENV)
+        log("mob interaction with player at ("..x..","..y..")")
     end
 })
 
